@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamic UDP Sender</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/dgram-browser@0.0.2/lib/dgram.min.js"></script>
+</head>
+
+<body class="bg-gray-100">
+
+    <div class="container mx-auto mt-10 p-5 bg-white rounded shadow-md">
+        <h1 class="text-2xl font-bold mb-4">Dynamic UDP Sender</h1>
+
+        <form id="udpForm" class="space-y-4">
+            <div>
+                <label for="templateSelect" class="block text-sm font-medium text-gray-700">Select Template</label>
+                <select id="templateSelect" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                    <option value="">Select a template</option>
+                </select>
+            </div>
+
+            <div>
+                <label for="ipAddress" class="block text-sm font-medium text-gray-700">IP Address</label>
+                <input type="text" id="ipAddress" name="ipAddress" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+            </div>
+
+            <div>
+                <label for="port" class="block text-sm font-medium text-gray-700">Port</label>
+                <input type="number" id="port" name="port" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+            </div>
+
+            <div>
+                <label for="message" class="block text-sm font-medium text-gray-700">Message</label>
+                <textarea id="message" name="message" rows="5" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"></textarea>
+            </div>
+
+            <div class="flex justify-end space-x-4">
+                <button type="button" onclick="sendUDP()" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">Send UDP</button>
+                <button type="button" onclick="saveTemplate()" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">Save Template</button>
+            </div>
+        </form>
+
+        <div id="response" class="mt-4 p-4 bg-green-100 text-green-700 rounded hidden"></div>
+    </div>
+
+    <script>
+        let templates = [];
+
+        async function fetchTemplates() {
+            try {
+                const response = await fetch('UDPTemplates.json');
+                templates = await response.json();
+                populateTemplates();
+            } catch (error) {
+                console.error('Error fetching templates:', error);
+            }
+        }
+
+        function populateTemplates() {
+            const templateSelect = document.getElementById('templateSelect');
+            templateSelect.innerHTML = '<option value="">Select a template</option>';
+            templates.forEach((template, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = template.name;
+                templateSelect.appendChild(option);
+            });
+        }
+
+        function updateFormWithTemplate(template) {
+            document.getElementById('ipAddress').value = template.ip;
+            document.getElementById('port').value = template.port;
+            document.getElementById('message').value = template.message;
+        }
+
+        function sendUDP() {
+            const ipAddress = document.getElementById('ipAddress').value;
+            const port = document.getElementById('port').value;
+            const message = document.getElementById('message').value;
+            const responseDiv = document.getElementById('response');
+
+            try {
+                const socket = dgram.createSocket('udp4');
+                const messageBuffer = Buffer.from(message);
+
+                socket.send(messageBuffer, 0, messageBuffer.length, port, ipAddress, (error) => {
+                    if (error) {
+                        responseDiv.textContent = `Error: ${error.message}`;
+                        responseDiv.classList.remove('hidden');
+                    } else {
+                        responseDiv.textContent = `Message sent to ${ipAddress}:${port}`;
+                        responseDiv.classList.remove('hidden');
+                    }
+                    socket.close();
+                });
+            } catch (error) {
+                responseDiv.textContent = `Error: ${error.message}`;
+                responseDiv.classList.remove('hidden');
+            }
+        }
+
+        function saveTemplate() {
+            const templateName = prompt('Enter a name for the template:');
+            if (!templateName) return;
+
+            const ipAddress = document.getElementById('ipAddress').value;
+            const port = document.getElementById('port').value;
+            const message = document.getElementById('message').value;
+
+            const newTemplate = {
+                name: templateName,
+                ip: ipAddress,
+                port: port,
+                message: message
+            };
+
+            templates.push(newTemplate);
+            alert('Template saved successfully!');
+            populateTemplates();
+        }
+
+        document.getElementById('templateSelect').addEventListener('change', (event) => {
+            const selectedIndex = event.target.value;
+            if (selectedIndex !== '') {
+                updateFormWithTemplate(templates[selectedIndex]);
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', fetchTemplates);
+    </script>
+</body>
+
+</html>

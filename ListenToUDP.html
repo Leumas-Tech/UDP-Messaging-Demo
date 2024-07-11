@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UDP Listener and Sender</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/dgram-browser@0.0.2/lib/dgram.min.js"></script>
+</head>
+
+<body class="bg-gray-100">
+
+    <div class="container mx-auto mt-10 p-5 bg-white rounded shadow-md flex flex-col lg:flex-row space-y-6 lg:space-y-0 lg:space-x-6">
+        <div class="flex-1">
+            <h1 class="text-2xl font-bold mb-4">UDP Sender</h1>
+
+            <form id="udpForm" class="space-y-4">
+                <div>
+                    <label for="ipAddress" class="block text-sm font-medium text-gray-700">IP Address</label>
+                    <input type="text" id="ipAddress" name="ipAddress" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                </div>
+
+                <div>
+                    <label for="port" class="block text-sm font-medium text-gray-700">Port</label>
+                    <input type="number" id="port" name="port" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                </div>
+
+                <div>
+                    <label for="message" class="block text-sm font-medium text-gray-700">Message</label>
+                    <textarea id="message" name="message" rows="5" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"></textarea>
+                </div>
+
+                <div class="flex justify-end">
+                    <button type="button" onclick="sendUDP()" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">Send UDP</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="flex-1">
+            <h2 class="text-2xl font-bold mb-4">Listen for UDP Messages</h2>
+            <form id="listenForm" class="space-y-4">
+                <div>
+                    <label for="listenPort" class="block text-sm font-medium text-gray-700">Port to Listen</label>
+                    <input type="number" id="listenPort" name="listenPort" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                </div>
+
+                <div class="flex justify-end">
+                    <button type="button" onclick="startListening()" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">Start Listening</button>
+                </div>
+            </form>
+
+            <div id="messages" class="mt-4 p-4 bg-yellow-100 text-yellow-700 rounded hidden"></div>
+        </div>
+    </div>
+
+    <script>
+        function sendUDP() {
+            const ipAddress = document.getElementById('ipAddress').value;
+            const port = document.getElementById('port').value;
+            const message = document.getElementById('message').value;
+            const responseDiv = document.getElementById('response');
+
+            try {
+                const socket = dgram.createSocket('udp4');
+                const messageBuffer = Buffer.from(message);
+
+                socket.send(messageBuffer, 0, messageBuffer.length, port, ipAddress, (error) => {
+                    if (error) {
+                        alert(`Error: ${error.message}`);
+                    } else {
+                        alert(`Message sent to ${ipAddress}:${port}`);
+                    }
+                    socket.close();
+                });
+            } catch (error) {
+                alert(`Error: ${error.message}`);
+            }
+        }
+
+        function startListening() {
+            const listenPort = document.getElementById('listenPort').value;
+            const messagesDiv = document.getElementById('messages');
+
+            try {
+                const server = dgram.createSocket('udp4');
+
+                server.on('message', (msg, rinfo) => {
+                    const message = `Received message: ${msg} from ${rinfo.address}:${rinfo.port}`;
+                    messagesDiv.textContent += `${message}\n`;
+                    messagesDiv.classList.remove('hidden');
+                });
+
+                server.on('error', (err) => {
+                    alert(`Server error:\n${err.stack}`);
+                    server.close();
+                });
+
+                server.on('listening', () => {
+                    const address = server.address();
+                    alert(`Server listening on ${address.address}:${address.port}`);
+                });
+
+                server.bind(listenPort);
+            } catch (error) {
+                alert(`Error: ${error.message}`);
+            }
+        }
+    </script>
+</body>
+
+</html>
